@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <link rel="icon" href="data:,">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alpha Swarm AI</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"/>
+    <style>
+        main.container { max-width: 960px; }
+        #chartContainer { margin-top: 2rem; position: relative; height: 40vh; }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <header>
+            <h1 style="text-align: center;">🤖 Alpha Swarm AI Analyzer</h1>
+            <p style="text-align: center;">Enter a token address to get an AI-powered risk analysis and price chart.</p>
+        </header>
+
+        <section id="inputSection">
+            <input type="text" id="tokenAddressInput" placeholder="Enter token address from any major chain...">
+            <button id="analyzeBtn">Analyze Token</button>
+        </section>
+
+        <article id="loading" aria-busy="true" style="display: none;">Fetching analysis...</article>
+
+        <section id="results" style="display: none;">
+            <div class="grid">
+                <article id="aiReportContainer">
+                    <h3>AI Analysis</h3>
+                    <pre id="aiReport"></pre>
+                </article>
+                <article id="chartContainer">
+                    <h3>7-Day Price Chart</h3>
+                    <canvas id="priceChart"></canvas>
+                </article>
+            </div>
+        </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.10/dayjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.10/plugin/utc.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-dayjs-4/dist/chartjs-adapter-dayjs-4.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
