@@ -5,6 +5,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const path = require('path');
+const axios = require('axios');
 const { analyzeToken } = require('./agents/analystAgent');
 const { generateFinalReport } = require('./agents/synthesizerAgent');
 
@@ -55,6 +56,47 @@ app.post('/analyze', async (req, res) => {
   }
 });
 
+// New endpoint to proxy CoinGecko coin ID lookup
+app.get('/api/coingecko/coin/:chainId/:tokenAddress', async (req, res) => {
+  const { chainId, tokenAddress } = req.params;
+  
+  const chainPlatform = {
+    'eth': 'ethereum', 'solana': 'solana', 'base': 'base',
+    'bsc': 'binance-smart-chain', 'arbitrum': 'arbitrum-one',
+    'polygon': 'polygon-pos', 'avalanche': 'avalanche'
+  }[chainId];
+  
+  if (!chainPlatform) {
+    return res.status(400).json({ error: 'Unsupported chain ID' });
+  }
+  
+  try {
+    const url = `https://api.coingecko.com/api/v3/coins/${chainPlatform}/contract/${tokenAddress}`;
+    const response = await axios.get(url, {
+      headers: { 'x-cg-demo-api-key': process.env.COINGECKO_API_KEY }
+    });
+    res.json({ id: response.data.id });
+  } catch (error) {
+    console.error('CoinGecko coin lookup error:', error.message);
+    res.status(404).json({ error: 'Coin not found' });
+  }
+});
+
+// New endpoint to proxy CoinGecko chart data
+app.get('/api/coingecko/chart/:coinId', async (req, res) => {
+  const { coinId } = req.params;
+  
+  try {
+    const url = `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=7`;
+    const response = await axios.get(url, {
+      headers: { 'x-cg-demo-api-key': process.env.COINGECKO_API_KEY }
+    });
+    res.json(response.data);
+  } catch (error) {
+    console.error('CoinGecko chart data error:', error.message);
+    res.status(404).json({ error: 'Chart data not found' });
+  }
+});
 
 // --- START SERVER ---
 app.listen(port, () => {
