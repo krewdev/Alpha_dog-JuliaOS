@@ -5,8 +5,8 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const path = require('path');
-const { analyzeToken } = require('./agents/analystAgent');
-const { generateFinalReport } = require('./agents/synthesizerAgent');
+const { analyzeToken } = require('./Agents/analystAgent');
+const { generateFinalReport } = require('./Agents/synthesizerAgent');
 
 const app = express();
 const port = 3001;
