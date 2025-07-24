@@ -16,8 +16,8 @@ const port = 3001;
 app.use(helmet.contentSecurityPolicy({
   directives: {
     defaultSrc: ["'self'"],
-    scriptSrc: ["'self'", "https://cdn.jsdelivr.net/npm/"],
-     connectSrc: ["'self'", "https://api.coingecko.com"],
+    scriptSrc: ["'self'", "https://cdn.jsdelivr.net/npm/", "'unsafe-inline'"],
+    connectSrc: ["'self'", "https://api.coingecko.com"],
     // Add 'unsafe-inline' to allow inline styles
     styleSrc: ["'self'", "https://cdn.jsdelivr.net/npm/", "'unsafe-inline'"], 
     imgSrc: ["'self'", "data:"],
