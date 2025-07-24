@@ -1,6 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
     
-    dayjs.extend(window.dayjs_plugin_utc);
+    // Safely extend dayjs with UTC plugin if available
+    if (typeof dayjs !== 'undefined' && window.dayjs_plugin_utc) {
+        dayjs.extend(window.dayjs_plugin_utc);
+    }
 
     const analyzeBtn = document.getElementById('analyzeBtn');
     const tokenInput = document.getElementById('tokenAddressInput');
@@ -9,12 +12,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const aiReportEl = document.getElementById('aiReport');
     const chartCanvas = document.getElementById('priceChart');
     let priceChartInstance = null;
+    
+    // Check if required elements exist
+    if (!analyzeBtn || !tokenInput) {
+        console.error('Required elements not found in DOM');
+        return;
+    }
+    
+    console.log('✅ Script loaded, button event listener attached');
 
     // IMPORTANT: Make sure this is your real CoinGecko API Key
     const COINGECKO_API_KEY = "CG-5iPgymTxfoceTmtcaKp1fBLc";
 
     // --- Main Event Listener ---
     analyzeBtn.addEventListener('click', async () => {
+        console.log('🔥 Analyze button clicked!'); // Debug log
         const tokenAddress = tokenInput.value.trim();
         if (!tokenAddress) {
             alert('Please enter a token address.');
