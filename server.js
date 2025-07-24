@@ -5,8 +5,8 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const path = require('path');
-const { analyzeToken } = require('./agents/analystAgent');
-const { generateFinalReport } = require('./agents/synthesizerAgent');
+const { analyzeToken } = require('./Agents/analystAgent');
+const { generateFinalReport } = require('./Agents/synthesizerAgent');
 
 const app = express();
 const port = 3001;
@@ -16,8 +16,8 @@ const port = 3001;
 app.use(helmet.contentSecurityPolicy({
   directives: {
     defaultSrc: ["'self'"],
-    scriptSrc: ["'self'", "https://cdn.jsdelivr.net/npm/"],
-     connectSrc: ["'self'", "https://api.coingecko.com"],
+    scriptSrc: ["'self'", "https://cdn.jsdelivr.net/npm/", "'unsafe-inline'"],
+    connectSrc: ["'self'", "https://api.coingecko.com"],
     // Add 'unsafe-inline' to allow inline styles
     styleSrc: ["'self'", "https://cdn.jsdelivr.net/npm/", "'unsafe-inline'"], 
     imgSrc: ["'self'", "data:"],
