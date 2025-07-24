@@ -1,94 +1,131 @@
 /*
   Agents/arbitrageAgent.js
   -----------------------------------
-  Purpose: Fetch prices across chains (Ethereum via Alchemy, Solana via Birdeye)
-  and identify arbitrage opportunities accounting for estimated bridging + gas fees.
-
-  NOTE: This is a lightweight PoC implementation. In production you would expand
-  to many chains / DEXs and implement accurate fee estimation.
+  Updated: Now relies solely on CoinGecko to fetch prices across the top 20
+  supported chains/platforms for a given token. It compares prices of wrapped
+  versions on each chain to flag profitable arbitrage opportunities.
 */
-const { Alchemy, Network } = require("alchemy-sdk");
 const axios = require("axios");
 
-// --- ENV VARS ---
-const ALCHEMY_API_KEY = process.env.ALCHEMY_API_KEY; // Ethereum API key
-const BIRDEYE_API_KEY = process.env.BIRDEYE_API_KEY; // Solana API key
-
-if (!ALCHEMY_API_KEY) console.warn("⚠️  Missing ALCHEMY_API_KEY env var – Ethereum prices will not be fetched.");
-if (!BIRDEYE_API_KEY) console.warn("⚠️  Missing BIRDEYE_API_KEY env var – Solana prices will not be fetched.");
-
-// --- HELPERS ---
-async function fetchEthPrice(tokenAddress) {
-  if (!ALCHEMY_API_KEY) return null;
-  try {
-    const config = { apiKey: ALCHEMY_API_KEY, network: Network.ETH_MAINNET };
-    const alchemy = new Alchemy(config);
-    // Alchemy token API supports getTokenMetadata & getTokenBalances but no direct price.
-    // We'll approximate using CoinGecko fallback for now.
-    const cgResp = await axios.get(
-      `https://api.coingecko.com/api/v3/simple/token_price/ethereum`,
-      { params: { contract_addresses: tokenAddress, vs_currencies: "usd" } }
-    );
-    const price = cgResp.data[tokenAddress.toLowerCase()]?.usd;
-    return price ? Number(price) : null;
-  } catch (err) {
-    console.error("[ArbitrageAgent] Error fetching ETH price:", err.message);
-    return null;
-  }
-}
-
-async function fetchSolPrice(tokenAddress) {
-  if (!BIRDEYE_API_KEY) return null;
-  try {
-    const resp = await axios.get(
-      `https://public-api.birdeye.so/public/price?address=${tokenAddress}`,
-      { headers: { "X-API-KEY": BIRDEYE_API_KEY } }
-    );
-    return resp.data?.data?.value || null;
-  } catch (err) {
-    console.error("[ArbitrageAgent] Error fetching SOL price:", err.message);
-    return null;
-  }
-}
+// CoinGecko supports ~ 50 platforms; we select 20 popular ones.
+const TOP_CHAINS = [
+  "ethereum",
+  "binance-smart-chain",
+  "solana",
+  "arbitrum-one",
+  "polygon-pos",
+  "avalanche",
+  "optimism",
+  "fantom",
+  "base",
+  "celo",
+  "gnosis",
+  "cronos",
+  "moonriver",
+  "moonbeam",
+  "harmony-shard-0",
+  "kava",
+  "klay-token",
+  "okex-chain",
+  "bitgert",
+  "tron",
+];
 
 function estimateFees({ fromChain, toChain }) {
-  // VERY rough static estimation (USD) – replace with live gas + bridge quote APIs.
-  const L1_GAS = 5;
-  const BRIDGE_FEE = 3;
+  // Static estimation; you'd replace with gas + bridge quotes.
+  const L1_GAS = 5; // USD
+  const BRIDGE_FEE = 3; // USD
   return fromChain === toChain ? L1_GAS : L1_GAS + BRIDGE_FEE;
 }
 
+async function locateTokenAcrossChains(tokenAddress) {
+  // Try each chain endpoint until we find the token; returns { id, platforms, symbol }
+  for (const chain of TOP_CHAINS) {
+    try {
+      const url = `https://api.coingecko.com/api/v3/coins/${chain}/contract/${tokenAddress}`;
+      const resp = await axios.get(url, {
+        params: {
+          localization: false,
+          tickers: false,
+          market_data: false,
+          community_data: false,
+          developer_data: false,
+          sparkline: false,
+        },
+      });
+      if (resp.data && resp.data.id) {
+        return {
+          id: resp.data.id,
+          symbol: resp.data.symbol,
+          platforms: resp.data.platforms || {},
+        };
+      }
+    } catch (_) {
+      /* continue */
+    }
+  }
+  return null;
+}
+
+async function fetchPrice(chain, contractAddress) {
+  try {
+    const url = `https://api.coingecko.com/api/v3/simple/token_price/${chain}`;
+    const resp = await axios.get(url, {
+      params: {
+        contract_addresses: contractAddress,
+        vs_currencies: "usd",
+      },
+    });
+    const price = resp.data[contractAddress.toLowerCase()]?.usd;
+    return price ? Number(price) : null;
+  } catch (err) {
+    return null;
+  }
+}
+
 async function findArbitrageOp(tokenAddress) {
-  const [ethPrice, solPrice] = await Promise.all([
-    fetchEthPrice(tokenAddress),
-    fetchSolPrice(tokenAddress),
-  ]);
+  const tokenInfo = await locateTokenAcrossChains(tokenAddress);
+  if (!tokenInfo) return [];
+
+  const platformEntries = Object.entries(tokenInfo.platforms).filter(([chain]) => TOP_CHAINS.includes(chain));
+  if (!platformEntries.length) return [];
+
+  // Fetch prices in parallel
+  const pricePromises = platformEntries.map(([chain, address]) => fetchPrice(chain, address));
+  const prices = await Promise.all(pricePromises);
+
+  const chainPrices = platformEntries.map(([chain], idx) => ({ chain, price: prices[idx] })).filter(p => p.price);
 
   const opportunities = [];
-  if (ethPrice && solPrice) {
-    const priceDiff = Math.abs(ethPrice - solPrice);
-    const cheaperChain = ethPrice < solPrice ? "Ethereum" : "Solana";
-    const expensiveChain = ethPrice > solPrice ? "Ethereum" : "Solana";
+  for (let i = 0; i < chainPrices.length; i++) {
+    for (let j = i + 1; j < chainPrices.length; j++) {
+      const a = chainPrices[i];
+      const b = chainPrices[j];
+      if (!a.price || !b.price) continue;
+      const cheaper = a.price < b.price ? a : b;
+      const expensive = a.price > b.price ? a : b;
+      const priceDiff = Math.abs(a.price - b.price);
+      const grossPct = priceDiff / Math.min(a.price, b.price);
+      const estFees = estimateFees({ fromChain: cheaper.chain, toChain: expensive.chain });
+      const netPct = (priceDiff - estFees) / Math.min(a.price, b.price);
 
-    // Simple profitability check – 5% threshold after fees
-    const grossPct = priceDiff / Math.min(ethPrice, solPrice);
-    const estFees = estimateFees({ fromChain: cheaperChain, toChain: expensiveChain });
-    const netPct = (priceDiff - estFees) / Math.min(ethPrice, solPrice);
-
-    if (netPct > 0.05) {
-      opportunities.push({
-        from: cheaperChain,
-        to: expensiveChain,
-        buyPrice: cheaperChain === "Ethereum" ? ethPrice : solPrice,
-        sellPrice: expensiveChain === "Ethereum" ? ethPrice : solPrice,
-        grossPct: (grossPct * 100).toFixed(2),
-        netPct: (netPct * 100).toFixed(2),
-        estFees,
-        path: [cheaperChain, "Bridge", expensiveChain],
-      });
+      if (netPct > 0.05) {
+        opportunities.push({
+          from: cheaper.chain,
+          to: expensive.chain,
+          buyPrice: cheaper.price,
+          sellPrice: expensive.price,
+          grossPct: (grossPct * 100).toFixed(2),
+          netPct: (netPct * 100).toFixed(2),
+          estFees,
+          path: [cheaper.chain, "Bridge", expensive.chain],
+        });
+      }
     }
   }
 
+  // Sort by highest netPct
+  opportunities.sort((a, b) => parseFloat(b.netPct) - parseFloat(a.netPct));
   return opportunities;
 }
 
