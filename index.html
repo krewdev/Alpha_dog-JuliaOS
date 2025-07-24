@@ -21,6 +21,7 @@
         <section id="inputSection">
             <input type="text" id="tokenAddressInput" placeholder="Enter token address from any major chain...">
             <button id="analyzeBtn">Analyze Token</button>
+            <button id="arbBtn">Find Arbitrage</button>
         </section>
 
         <article id="loading" aria-busy="true" style="display: none;">Fetching analysis...</article>
@@ -30,10 +31,17 @@
                 <article id="aiReportContainer">
                     <h3>AI Analysis</h3>
                     <pre id="aiReport"></pre>
+                    <h3>Social Sentiment</h3>
+                    <pre id="sentimentReport"></pre>
                 </article>
                 <article id="chartContainer">
                     <h3>7-Day Price Chart</h3>
                     <canvas id="priceChart"></canvas>
+                </article>
+                <article id="arbFlowContainer">
+                    <h3>Arbitrage Paths</h3>
+                    <canvas id="arbChart"></canvas>
+                    <pre id="arbText"></pre>
                 </article>
             </div>
         </section>
