@@ -5,7 +5,9 @@ This guide shows you how to render/deploy your AI token analyzer application on 
 ## 📋 Prerequisites
 
 Before deploying, ensure you have:
-- ✅ A valid **Gemini API Key** from [Google AI Studio](https://aistudio.google.com/)
+- ✅ **Gemini API Key** from [Google AI Studio](https://aistudio.google.com/) - Required for AI analysis
+- ✅ **Alchemy API Key** from [Alchemy](https://www.alchemy.com/) - Required for blockchain data
+- ✅ **CoinGecko API Key** from [CoinGecko](https://www.coingecko.com/en/api) - Optional (demo key included)
 - ✅ Node.js 18+ installed
 - ✅ Git repository access
 
@@ -34,13 +36,20 @@ Render is perfect for Node.js applications and offers automatic deployments.
        envVars:
          - key: GEMINI_API_KEY
            sync: false
+         - key: ALCHEMY_API_KEY
+           sync: false
+         - key: COINGECKO_API_KEY
+           value: CG-5iPgymTxfoceTmtcaKp1fBLc
    ```
 
 3. **Deploy on Render**:
    - Go to [render.com](https://render.com)
    - Connect your GitHub repository
    - Create a new Web Service
-   - Set environment variable: `GEMINI_API_KEY=your_actual_key`
+   - Set environment variables:
+     - `GEMINI_API_KEY=your_actual_gemini_key`
+     - `ALCHEMY_API_KEY=your_actual_alchemy_key`
+     - `COINGECKO_API_KEY=CG-5iPgymTxfoceTmtcaKp1fBLc` (or your own key)
    - Deploy!
 
 #### Render Configuration:
@@ -78,7 +87,9 @@ Great for frontend-heavy applications with API routes.
        }
      ],
      "env": {
-       "GEMINI_API_KEY": "@gemini-api-key"
+       "GEMINI_API_KEY": "@gemini-api-key",
+       "ALCHEMY_API_KEY": "@alchemy-api-key",
+       "COINGECKO_API_KEY": "CG-5iPgymTxfoceTmtcaKp1fBLc"
      }
    }
    ```
@@ -92,6 +103,8 @@ Great for frontend-heavy applications with API routes.
 4. **Set environment variables**:
    ```bash
    vercel env add GEMINI_API_KEY
+   vercel env add ALCHEMY_API_KEY
+   vercel env add COINGECKO_API_KEY
    ```
 
 ---
@@ -109,7 +122,10 @@ Simple deployment with automatic scaling.
 2. **Deploy**:
    - Go to [railway.app](https://railway.app)
    - Connect GitHub repository
-   - Add environment variable: `GEMINI_API_KEY`
+   - Add environment variables:
+     - `GEMINI_API_KEY`
+     - `ALCHEMY_API_KEY`
+     - `COINGECKO_API_KEY=CG-5iPgymTxfoceTmtcaKp1fBLc`
    - Deploy automatically
 
 ---
@@ -153,7 +169,11 @@ coverage
 docker build -t alpha-dog-juliaos .
 
 # Run container
-docker run -p 3001:3001 -e GEMINI_API_KEY=your_key alpha-dog-juliaos
+docker run -p 3001:3001 \
+  -e GEMINI_API_KEY=your_gemini_key \
+  -e ALCHEMY_API_KEY=your_alchemy_key \
+  -e COINGECKO_API_KEY=CG-5iPgymTxfoceTmtcaKp1fBLc \
+  alpha-dog-juliaos
 ```
 
 ---
@@ -204,6 +224,12 @@ For serverless deployment with Netlify Functions.
      - key: GEMINI_API_KEY
        scope: RUN_TIME
        type: SECRET
+     - key: ALCHEMY_API_KEY
+       scope: RUN_TIME
+       type: SECRET
+     - key: COINGECKO_API_KEY
+       scope: RUN_TIME
+       value: CG-5iPgymTxfoceTmtcaKp1fBLc
    ```
 
 2. **Deploy via DigitalOcean dashboard**
@@ -220,7 +246,9 @@ npm pkg set engines.node=">=18.0.0"
 
 ### 2. **Environment Variables Setup**:
 Create these environment variables on your platform:
-- `GEMINI_API_KEY`: Your Google AI Studio API key
+- `GEMINI_API_KEY`: Your Google AI Studio API key (required for AI analysis)
+- `ALCHEMY_API_KEY`: Your Alchemy API key (required for blockchain data)
+- `COINGECKO_API_KEY`: Your CoinGecko API key (optional, demo key: CG-5iPgymTxfoceTmtcaKp1fBLc)
 - `PORT`: Usually auto-set by platforms (defaults to 3001)
 
 ### 3. **Test Locally First**:
@@ -228,8 +256,10 @@ Create these environment variables on your platform:
 # Install dependencies
 npm install
 
-# Set environment variable
-export GEMINI_API_KEY=your_actual_key
+# Set environment variables
+export GEMINI_API_KEY=your_actual_gemini_key
+export ALCHEMY_API_KEY=your_actual_alchemy_key
+export COINGECKO_API_KEY=CG-5iPgymTxfoceTmtcaKp1fBLc
 
 # Start server
 npm start
@@ -286,7 +316,10 @@ For fastest deployment, I recommend **Render.com**:
 1. Add start script: `npm pkg set scripts.start="node server.js"`
 2. Push to GitHub
 3. Connect to Render
-4. Add `GEMINI_API_KEY` environment variable
+4. Add environment variables:
+   - `GEMINI_API_KEY` (your Google AI Studio key)
+   - `ALCHEMY_API_KEY` (your Alchemy key)
+   - `COINGECKO_API_KEY` (use: CG-5iPgymTxfoceTmtcaKp1fBLc)
 5. Deploy!
 
 Your app will be live at `https://your-app-name.onrender.com` in minutes!

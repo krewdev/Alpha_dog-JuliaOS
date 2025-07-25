@@ -9,5 +9,9 @@ services:
     envVars:
       - key: GEMINI_API_KEY
         sync: false
+      - key: ALCHEMY_API_KEY
+        sync: false
+      - key: COINGECKO_API_KEY
+        value: CG-5iPgymTxfoceTmtcaKp1fBLc
       - key: NODE_ENV
         value: production
