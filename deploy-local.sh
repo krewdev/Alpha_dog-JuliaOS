@@ -36,16 +36,20 @@ if [ ! -f ".env" ]; then
     cat > .env << EOF
 # Environment variables for Alpha_dog-JuliaOS
 GEMINI_API_KEY=your_gemini_api_key_here
+ALCHEMY_API_KEY=your_alchemy_api_key_here
+COINGECKO_API_KEY=CG-5iPgymTxfoceTmtcaKp1fBLc
 PORT=3001
 NODE_ENV=development
 EOF
     echo "📝 Created .env file. Please update GEMINI_API_KEY with your actual key."
 fi
 
-# Check if GEMINI_API_KEY is set
+# Check if API keys are set
 if grep -q "your_gemini_api_key_here" .env; then
-    echo "⚠️  Please update GEMINI_API_KEY in .env file with your actual Gemini API key"
-    echo "   Get your key from: https://aistudio.google.com/"
+    echo "⚠️  Please update API keys in .env file:"
+    echo "   GEMINI_API_KEY: Get from https://aistudio.google.com/"
+    echo "   ALCHEMY_API_KEY: Get from https://www.alchemy.com/"
+    echo "   COINGECKO_API_KEY: Already set with demo key (get your own from https://www.coingecko.com/en/api)"
 fi
 
 # Start the application

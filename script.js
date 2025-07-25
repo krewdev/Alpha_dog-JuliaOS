@@ -11,6 +11,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const resultsSection = document.getElementById('results');
     const aiReportEl = document.getElementById('aiReport');
     const chartCanvas = document.getElementById('priceChart');
+    
+    // New elements for enhanced features
+    const arbitrageContainer = document.getElementById('arbitrageContainer');
+    const arbitrageResults = document.getElementById('arbitrageResults');
+    const pricesContainer = document.getElementById('pricesContainer');
+    const pricesGrid = document.getElementById('pricesGrid');
+    const securityContainer = document.getElementById('securityContainer');
+    const securityResults = document.getElementById('securityResults');
+    
     let priceChartInstance = null;
     
     // Check if required elements exist
@@ -39,11 +48,21 @@ document.addEventListener('DOMContentLoaded', () => {
         analyzeBtn.disabled = true;
 
         try {
-            // 2. Fetch the AI report and chain ID from our server
-            const { report, chainId } = await fetchAiReport(tokenAddress);
+            // 2. Fetch the AI report and additional data from our server
+            const analysisData = await fetchAiReport(tokenAddress);
+            const { report, chainId, additionalData } = analysisData;
             aiReportEl.textContent = report;
 
-            // 3. Use chain ID and address to get chart data from CoinGecko
+            // 3. Fetch and display arbitrage opportunities
+            await fetchAndDisplayArbitrage(tokenAddress);
+
+            // 4. Fetch and display multi-chain prices
+            await fetchAndDisplayPrices(tokenAddress);
+
+            // 5. Fetch and display security analysis
+            await fetchAndDisplaySecurity(tokenAddress, chainId);
+
+            // 6. Use chain ID and address to get chart data from CoinGecko
             const coinId = await fetchCoinGeckoId(tokenAddress, chainId);
             if (coinId) {
                 const chartData = await fetchChartData(coinId);
@@ -51,11 +70,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     renderChart(chartData);
                 } else {
                     if (priceChartInstance) priceChartInstance.destroy();
-                    aiReportEl.textContent = report + "\n\n(Could not fetch chart data for this coin.)";
+                    console.log('Could not fetch chart data for this coin.');
                 }
             } else {
                 if (priceChartInstance) priceChartInstance.destroy();
-                aiReportEl.textContent = report + "\n\n(Could not find this token on CoinGecko to create a chart.)";
+                console.log('Could not find this token on CoinGecko to create a chart.');
             }
 
         } catch (error) {
@@ -113,6 +132,72 @@ document.addEventListener('DOMContentLoaded', () => {
         return await response.json();
     }
 
+    // New function to fetch and display arbitrage opportunities
+    async function fetchAndDisplayArbitrage(tokenAddress) {
+        try {
+            const response = await fetch('/arbitrage', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tokenAddress, minProfit: 25 })
+            });
+            
+            if (!response.ok) {
+                console.log('Could not fetch arbitrage data');
+                return;
+            }
+            
+            const data = await response.json();
+            displayArbitrageOpportunities(data);
+        } catch (error) {
+            console.error('Arbitrage fetch error:', error);
+        }
+    }
+
+    // New function to fetch and display multi-chain prices
+    async function fetchAndDisplayPrices(tokenAddress) {
+        try {
+            const response = await fetch('/prices', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    tokenAddress, 
+                    chains: ['ethereum', 'polygon', 'arbitrum', 'bsc', 'base'] 
+                })
+            });
+            
+            if (!response.ok) {
+                console.log('Could not fetch multi-chain prices');
+                return;
+            }
+            
+            const data = await response.json();
+            displayMultiChainPrices(data);
+        } catch (error) {
+            console.error('Prices fetch error:', error);
+        }
+    }
+
+    // New function to fetch and display security analysis
+    async function fetchAndDisplaySecurity(tokenAddress, chainId) {
+        try {
+            const response = await fetch('/security', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tokenAddress, chainId })
+            });
+            
+            if (!response.ok) {
+                console.log('Could not fetch security data');
+                return;
+            }
+            
+            const data = await response.json();
+            displaySecurityAnalysis(data);
+        } catch (error) {
+            console.error('Security fetch error:', error);
+        }
+    }
+
     // --- Chart Rendering Function ---
 
     function renderChart(chartData) {
@@ -160,5 +245,98 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
+    }
+
+    // Display functions for new features
+    function displayArbitrageOpportunities(data) {
+        if (!data.opportunities || data.opportunities.length === 0) {
+            arbitrageResults.innerHTML = '<p>No profitable arbitrage opportunities found (minimum $25 profit).</p>';
+            arbitrageContainer.style.display = 'block';
+            return;
+        }
+
+        let html = `<p>Found ${data.opportunities.length} profitable opportunities:</p>`;
+        html += '<div class="grid">';
+        
+        data.opportunities.slice(0, 3).forEach(opp => {
+            const riskColor = opp.riskLevel === 'Low' ? 'green' : opp.riskLevel === 'Medium' ? 'orange' : 'red';
+            html += `
+                <article style="border-left: 4px solid ${riskColor};">
+                    <h6>${opp.buyChain.toUpperCase()} → ${opp.sellChain.toUpperCase()}</h6>
+                    <p><strong>Net Profit:</strong> $${opp.netProfit.toFixed(2)} (${opp.netProfitPercentage.toFixed(2)}%)</p>
+                    <p><strong>Buy Price:</strong> $${opp.buyPrice.toFixed(6)}</p>
+                    <p><strong>Sell Price:</strong> $${opp.sellPrice.toFixed(6)}</p>
+                    <p><strong>Bridge:</strong> ${opp.bridgeInfo.protocol} ($${opp.bridgeInfo.cost}, ${opp.bridgeInfo.time}min)</p>
+                    <p><strong>Risk:</strong> <span style="color: ${riskColor};">${opp.riskLevel}</span></p>
+                </article>
+            `;
+        });
+        
+        html += '</div>';
+        arbitrageResults.innerHTML = html;
+        arbitrageContainer.style.display = 'block';
+    }
+
+    function displayMultiChainPrices(data) {
+        const validPrices = Object.entries(data).filter(([chain, info]) => info && info.price);
+        
+        if (validPrices.length === 0) {
+            pricesGrid.innerHTML = '<p>No price data available across chains.</p>';
+            pricesContainer.style.display = 'block';
+            return;
+        }
+
+        let html = '';
+        validPrices.forEach(([chain, info]) => {
+            const changeColor = info.priceChange24h >= 0 ? 'green' : 'red';
+            const changeSymbol = info.priceChange24h >= 0 ? '+' : '';
+            
+            html += `
+                <article>
+                    <h6>${chain.charAt(0).toUpperCase() + chain.slice(1)}</h6>
+                    <p><strong>Price:</strong> $${info.price.toFixed(6)}</p>
+                    <p><strong>24h Change:</strong> <span style="color: ${changeColor};">${changeSymbol}${info.priceChange24h?.toFixed(2) || 'N/A'}%</span></p>
+                    <p><strong>Volume:</strong> $${info.volume24h ? info.volume24h.toLocaleString() : 'N/A'}</p>
+                    <p><strong>Market Cap:</strong> $${info.marketCap ? info.marketCap.toLocaleString() : 'N/A'}</p>
+                </article>
+            `;
+        });
+        
+        pricesGrid.innerHTML = html;
+        pricesContainer.style.display = 'block';
+    }
+
+    function displaySecurityAnalysis(data) {
+        let html = '<div class="grid">';
+        
+        if (data.metadata) {
+            html += `
+                <article>
+                    <h6>📋 Token Metadata</h6>
+                    <p><strong>Name:</strong> ${data.metadata.metadata?.name || 'N/A'}</p>
+                    <p><strong>Symbol:</strong> ${data.metadata.metadata?.symbol || 'N/A'}</p>
+                    <p><strong>Decimals:</strong> ${data.metadata.metadata?.decimals || 'N/A'}</p>
+                    <p><strong>Recent Transfers:</strong> ${data.metadata.recentTransfers?.length || 0}</p>
+                </article>
+            `;
+        }
+        
+        if (data.security) {
+            const contractStatus = data.security.isContract ? '✅ Yes' : '❌ No';
+            const metadataStatus = data.security.securityFlags?.hasMetadata ? '✅ Yes' : '❌ No';
+            
+            html += `
+                <article>
+                    <h6>🔒 Security Flags</h6>
+                    <p><strong>Is Contract:</strong> ${contractStatus}</p>
+                    <p><strong>Has Metadata:</strong> ${metadataStatus}</p>
+                    <p><strong>Chain:</strong> ${data.security.chainId}</p>
+                </article>
+            `;
+        }
+        
+        html += '</div>';
+        securityResults.innerHTML = html;
+        securityContainer.style.display = 'block';
     }
 });
