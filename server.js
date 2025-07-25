@@ -9,7 +9,7 @@ const { analyzeToken } = require('./Agents/analystAgent');
 const { generateFinalReport } = require('./Agents/synthesizerAgent');
 
 const app = express();
-const port = 3001;
+const port = process.env.PORT || 3001;
 
 // --- MIDDLEWARE SETUP ---
 // In server.js

@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: alpha-dog-juliaos
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: NODE_ENV
+        value: production
