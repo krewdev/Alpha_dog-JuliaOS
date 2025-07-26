@@ -146,6 +146,17 @@ app.post('/routes', async (req, res) => {
 
 
 // --- START SERVER ---
-app.listen(port, () => {
-  console.log(`✅ Alpha Swarm server listening on http://localhost:${port}`);
-});
+
+// Export the app for serverless platforms (e.g., Vercel). When running locally
+// ("node server.js"), start the Express listener as usual. Vercel will detect
+// the exported module and handle the request lifecycle without needing
+// `app.listen`.
+
+if (require.main === module) {
+  // Running locally
+  app.listen(port, () => {
+    console.log(`✅ Alpha Swarm server listening on http://localhost:${port}`);
+  });
+}
+
+module.exports = app;
